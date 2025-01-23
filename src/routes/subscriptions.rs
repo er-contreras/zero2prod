@@ -9,30 +9,36 @@ pub struct FormData {
     name: String,
 }
 
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, pool),
+    fields(
+        subscriber_email = %form.email,
+        subscriber_name = %form.name
+    )
+)]
 pub async fn subscribe(
     form: web::Form<FormData>,
     // Retrieving a connection from the application state!
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let request_id = Uuid::new_v4();
-    log::info!(
-        "request_id {} - Adding '{}' '{}' as a new subscriber.",
-        request_id,
-        form.email,
-        form.name
-    );
-    log::info!(
-        "request_id {} - Saving new subscriber details in the database",
-        request_id
-    );
+    match insert_subscriber(&pool, &form).await
+    {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish()
+    }
+}
 
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(
+    pool: &PgPool,
+    form: &FormData,
+) -> Result<(), sqlx::Error> {
     let subscriber_id = Uuid::new_v4();
-    // `Result` has two variants: `Ok` and `Err`.
-    // The first for successes, the second for failures.
-    // We use a `match` statement to choose what to do based
-    // on the outcome.
-    // We will talk more about `Result` going forward!
-    match sqlx::query!(
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -42,25 +48,14 @@ pub async fn subscribe(
         form.name,
         Utc::now()
     )
-    // We use `get_ref` to get an inmutable reference to the `PgConnection`
-    // wrapped by `web::Data`
-    .execute(pool.get_ref())
+    .execute(pool)
     .await
-    {
-        Ok(_) => {
-            log::info!(
-                "request_id {} - New subscriber detailes have been saved",
-                request_id
-            );
-            HttpResponse::Ok().finish()
-        }
-        Err(e) => {
-            log::error!(
-                "request_id {} - Failed to execute query: {:?}",
-                request_id,
-                e
-            );
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    // Using the `?` operator to return early 
+    // if the function failed, returning  a sqlx::Error
+    // We will talk about error handling in depth later!
+    })?;
+    Ok(())
 }
