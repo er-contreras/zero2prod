@@ -9,9 +9,13 @@ In case you already have an Docker image try the next.
 1. sudo docker start <container-ID>
 2. SKIP_DOCKER=true ./scripts/init_db.sh
 
+### Steps to build from Dockerfile
+```docker build --tag zero2prod --file Dockerfile .```
+docker run -p 8000:8000 zero2prod
+
 ### Example of how to use database with Docker in terminal
 
-1. docker exec -it <container-ID> psql -U postgres
+1. ```docker exec -it <container-ID> psql -U postgres```
 
 ### Example of how to make a post request.
 
