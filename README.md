@@ -1,5 +1,11 @@
 ### Steps to get app running
 
+If Docker image has not created yet, try the next.
+```docker run -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=newsletter -p 5432:5432 -d postgres postgres -N 1000```
+
+Then you can follow the next steps!
+
+In case you already have an Docker image try the next.
 1. sudo docker start <container-ID>
 2. SKIP_DOCKER=true ./scripts/init_db.sh
 
